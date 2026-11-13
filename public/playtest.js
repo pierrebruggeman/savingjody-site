@@ -4,6 +4,8 @@
 (function () {
   var PROJECT = "savingjody";
   var URL = "https://firestore.googleapis.com/v1/projects/" + PROJECT + "/databases/(default)/documents/playtesters?documentId=";
+  // Google Apps Script web app ("Saving Jody playtester emails" in Pierre's account): emails Pierre each NEW sign-up.
+  var NOTIFY = "https://script.google.com/macros/s/AKfycbyC2vtISopoRg8nYsHGKCfcpLGabLSQdOSDwgPa3n6jpqjnofRkEKz2DQR4t38onSu8/exec";
 
   function sha256(text) {
     return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function (buf) {
@@ -39,6 +41,10 @@
         return fetch(URL + id, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields: fields }) });
       }).then(function (r) {
         // 409 = this email already signed up: same happy ending
+        if (r.ok) {   // brand-new sign-up (409 = already on the list): ping the email script, fire and forget
+          try { fetch(NOTIFY, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify({ email: email, name: name, device: device, lang: fields.lang.stringValue }) }); } catch (x) {}
+        }
         if (r.ok || r.status === 409) { box.classList.add("done"); show("ok"); form.reset(); }
         else throw new Error(r.status);
       }).catch(function () {
